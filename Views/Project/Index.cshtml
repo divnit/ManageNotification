@@ -1,0 +1,330 @@
+﻿@model List<ProjectModel>
+
+@{
+    ViewData["Title"] = "Projects";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="~/css/custom.css" rel="stylesheet" />
+
+    <style>
+        .table th {
+            background-color: #5c3c0a;
+            color: white;
+            text-align: center;
+        }
+
+        .table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .btn-brown {
+            background-color: #5c3c0a;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+
+            .btn-brown:hover {
+                background-color: #3a2603;
+            }
+
+        .btn-red {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+        }
+
+            .btn-red:hover {
+                background-color: #b71c1c;
+            }
+
+        body {
+            padding: 30px;
+        }
+
+        .modal-content {
+            border-radius: 8px;
+        }
+
+        .modal-header .close {
+            padding: 0.5rem 1rem;
+            font-size: 1.25rem;
+        }
+
+        .btn-red {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+        }
+
+            .btn-red:hover {
+                background-color: #b71c1c;
+            }
+
+    </style>
+</head>
+<body>
+
+    <div class="d-flex justify-content-between mb-3">
+        <button class="btn-brown" data-toggle="modal" data-target="#addModal" id="openAddModal">
+            <i class="fa fa-plus mr-1"></i> Add
+        </button>
+
+        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+            <button type="submit" class="btn btn-danger">
+                <i class="fa fa-sign-out-alt mr-1"></i> Logout
+            </button>
+        </form>
+    </div>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Project Name</th>
+                <th>View JSON</th>
+                <th>Add</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                <tr>
+                    <td class="row-number">@(@i + 1).</td>
+                    <td>@Model[i].Name</td>
+                    <td>
+                        <button class="btn-brown view-btn"
+                                data-name="@Model[i].Name"
+                                data-file="@Model[i].JsonFilePath"
+                                data-toggle="modal"
+                                data-target="#addModal">
+                            View
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn-brown row-add-btn"
+                                data-toggle="modal"
+                                data-target="#rowAddModal"
+                                data-project="@Model[i].Name">
+                            Add
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn btn-danger delete-btn"
+                                data-id="@Model[i].Id"
+                                data-name="@Model[i].Name"
+                                data-toggle="modal"
+                                data-target="#confirmDeleteModal">
+                            <i class="fa fa-trash"></i>
+                        </button>
+
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content p-3">
+                <form asp-action="Add" asp-controller="Project" method="post" enctype="multipart/form-data">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">ADD</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-group row">
+                            <label class="col-sm-4 col-form-label">Project Name:</label>
+                            <div class="col-sm-8">
+                                <input type="text" name="name" id="projectName" class="form-control" required />
+                            </div>
+                        </div>
+
+                        <div class="form-group row" id="jsonFileGroup">
+                            <label class="col-sm-4 col-form-label">Json File:</label>
+                            <div class="col-sm-8">
+                                <input type="file" name="jsonFile" id="jsonFileInput" accept=".json" class="form-control" required />
+                            </div>
+                        </div>
+
+                        <div class="form-group row d-none" id="jsonContentRow">
+                            <label class="col-sm-4 col-form-label">JSON Content:</label>
+                            <div class="col-sm-8">
+                                <textarea id="jsonViewer" class="form-control" rows="10" readonly></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn-brown" id="saveBtn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row Add Modal (checkbox list) -->
+    <div class="modal fade" id="rowAddModal" tabindex="-1" role="dialog" aria-labelledby="rowAddModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content p-3">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Permissions</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span>&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-inline mb-3">
+                        <input type="text" class="form-control mr-2 flex-grow-1" id="assignInput" placeholder="Enter project name..." style="width: 85%;" />
+                        <button class="btn-brown">Save</button>
+                    </div>
+
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="background-color: #5c3c0a; color: white;">Name</th>
+                                <th style="background-color: #5c3c0a; color: white;">Status</th>
+                                <th style="background-color: #5c3c0a; color: white;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Project-1</td>
+                                <td><input type="checkbox" checked /></td>
+                                <td><button class="btn-brown btn-sm">Save</button></td>
+                            </tr>
+                            <tr>
+                                <td>Project-2</td>
+                                <td><input type="checkbox" checked /></td>
+                                <td><button class="btn-brown btn-sm">Save</button></td>
+                            </tr>
+                            <tr>
+                                <td>Project-3</td>
+                                <td><input type="checkbox" checked /></td>
+                                <td><button class="btn-brown btn-sm">Save</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-brown">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content p-3">
+                <div class="modal-header border-0 pb-1">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center pt-1 pb-3">
+                    <p>Are you sure you want to delete <strong id="deleteProjectName">this project</strong>?</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0">
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" name="id" id="deleteProjectId" />
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Scripts -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+    <!-- JS logic -->
+    <script>
+
+        $(document).ready(function () {
+            $('.view-btn').click(function () {
+
+            const name = $(this).data('name');
+            const filePath = $(this).data('file');
+            const fullUrl = window.location.origin + filePath;
+
+            $('#modalTitle').text('View Json File');
+            $('#projectName').val(name).prop('readonly', true);
+            $('#jsonFileGroup').addClass('d-none');
+            $('#saveBtn').hide();
+            $('#jsonContentRow').removeClass('d-none');
+            $('#jsonViewer').val("Loading...");
+
+            fetch(fullUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("File not found");
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    // Check if HTML is being returned instead of JSON
+                    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+                        $('#jsonViewer').val("No JSON file found.");
+                    } else {
+                        $('#jsonViewer').val(text);
+                    }
+                })
+                .catch(error => {
+                    $('#jsonViewer').val("No JSON file found.");
+                });
+        });
+
+
+            // Top-level "Add" modal reset
+            $('#openAddModal').click(function () {
+                $('#modalTitle').text('ADD');
+                $('#projectName').val('').prop('readonly', false);
+                $('#jsonFileInput').val('');
+                $('#jsonFileGroup').removeClass('d-none');
+                $('#saveBtn').show();
+                $('#jsonContentRow').addClass('d-none');
+                $('#jsonViewer').val('');
+            });
+
+            $('.row-add-btn').click(function () {
+                const project = $(this).data('project');
+                $('#assignInput').val(project);
+            });
+
+            $('.delete-btn').click(function () {
+                var name = $(this).data('name');
+                var id = $(this).data('id');
+                $('#deleteProjectName').text(name);
+                $('#deleteProjectId').val(id);
+            });
+
+        });
+
+    </script>
+
+</body>
+</html>
