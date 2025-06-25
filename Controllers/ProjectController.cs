@@ -29,9 +29,11 @@ public class ProjectController : Controller
                 Directory.CreateDirectory(uploadDir);
             }
 
-            var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(jsonFile.FileName)}";
-            var filePath = Path.Combine(uploadDir, uniqueFileName);
+            string projectName = string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
+            string originalFileName = Path.GetFileName(jsonFile.FileName);
+            string fileName = $"{projectName}_{originalFileName}";
 
+            var filePath = Path.Combine(uploadDir, fileName);
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await jsonFile.CopyToAsync(stream);
@@ -40,7 +42,7 @@ public class ProjectController : Controller
             var project = new ProjectModel
             {
                 Name = name,
-                JsonFilePath = "/uploads/" + uniqueFileName
+                JsonFilePath = "/uploads/" + fileName
             };
 
             _context.Projects.Add(project);
@@ -50,12 +52,24 @@ public class ProjectController : Controller
         return RedirectToAction("Index");
     }
 
+
     [HttpPost]
     public IActionResult Delete(int id)
     {
         var project = _context.Projects.FirstOrDefault(p => p.Id == id);
         if (project != null)
         {
+            // Only try to delete if JsonFilePath is not null or empty
+            if (!string.IsNullOrWhiteSpace(project.JsonFilePath))
+            {
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", project.JsonFilePath.TrimStart('/'));
+
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+
             _context.Projects.Remove(project);
             _context.SaveChanges();
         }
