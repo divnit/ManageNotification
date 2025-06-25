@@ -4,7 +4,7 @@ Create Database and Run below query, Just replace your database name into below 
 
 To Create Projects table
 
-USE [SiddhiMTest]
+USE [YourDatabaseName]
 GO
 
 /****** Object:  Table [nitinj].[Projects]    Script Date: 25/06/2025 12:30:00 ******/
@@ -29,7 +29,7 @@ GO
 
 To Create Users table
 
-USE [SiddhiMTest]
+USE [YourDatabaseName]
 GO
 
 /****** Object:  Table [nitinj].[Users]    Script Date: 25/06/2025 12:31:16 ******/
@@ -52,3 +52,28 @@ CREATE TABLE [nitinj].[Users](
 GO
 
 ==================================
+To Create References table
+
+USE [YourDatabaseName]
+GO
+
+/****** Object:  Table [nitinj].[References]    Script Date: 25/06/2025 18:47:08 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [nitinj].[References](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[MainProjectId] [int] NOT NULL,
+	[SubProjectId] [int] NOT NULL,
+	[IsAssigned] [bit] NOT NULL,
+ CONSTRAINT [PK_References] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+

@@ -14,5 +14,6 @@ namespace ManageNotification.Data
 
         public DbSet<UserModel> Users { get; set; }
 
+        public DbSet<Reference> References { get; set; }
     }
 }

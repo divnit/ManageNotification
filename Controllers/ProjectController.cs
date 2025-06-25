@@ -1,8 +1,7 @@
 ﻿using ManageNotification.Data;
-using Microsoft.AspNetCore.Authorization;
+using ManageNotification.Models;
 using Microsoft.AspNetCore.Mvc;
 
-[Authorize]
 public class ProjectController : Controller
 {
     private readonly AppDbContext _context;
@@ -75,6 +74,62 @@ public class ProjectController : Controller
         }
 
         return RedirectToAction("Index");
+    }
+
+    [HttpGet]
+    public IActionResult GetSubProjects(int mainProjectId)
+    {
+        var subProjects = (from r in _context.References
+                           join p in _context.Projects on r.SubProjectId equals p.Id
+                           where r.MainProjectId == mainProjectId
+                           select new
+                           {
+                               id = r.SubProjectId,
+                               name = p.Name,
+                               isAssigned = r.IsAssigned
+                           }).ToList();
+
+        return Json(subProjects);
+    }
+
+
+
+    [HttpPost]
+    public async Task<JsonResult> SaveSubProjectsWithNew([FromBody] SaveSubProjectsModel model)
+    {
+        foreach (var sp in model.SubProjects)
+        {
+            var subProj = _context.Projects.FirstOrDefault(p => p.Name == sp.Name);
+            if (subProj == null)
+            {
+                subProj = new ProjectModel { Name = sp.Name };
+                _context.Projects.Add(subProj);
+                _context.SaveChanges();
+            }
+
+            var existing = _context.References.FirstOrDefault(r =>
+                r.MainProjectId == model.MainProjectId &&
+                r.SubProjectId == subProj.Id);
+
+            if (existing == null)
+            {
+                var reference = new Reference
+                {
+                    MainProjectId = model.MainProjectId,
+                    SubProjectId = subProj.Id,
+                    IsAssigned = sp.IsAssigned
+                };
+                _context.References.Add(reference);
+            }
+            else
+            {
+                existing.IsAssigned = sp.IsAssigned;
+            }
+        }
+
+        _context.SaveChanges();
+
+        return Json(new { success = true });
     }
 
 }

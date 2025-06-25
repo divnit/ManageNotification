@@ -119,7 +119,8 @@
                         <button class="btn-brown row-add-btn"
                                 data-toggle="modal"
                                 data-target="#rowAddModal"
-                                data-project="@Model[i].Name">
+                                data-project="@Model[i].Name"
+                                data-id="@Model[i].Id">
                             Add
                         </button>
                     </td>
@@ -193,11 +194,12 @@
 
                 <div class="modal-body">
                     <div class="form-inline mb-3">
-                        <input type="text" class="form-control mr-2 flex-grow-1" id="assignInput" placeholder="Enter project name..." style="width: 85%;" />
-                        <button class="btn-brown">Save</button>
+                        <input type="text" class="form-control mr-2 flex-grow-1" id="assignInput" placeholder="Enter subproject name..." style="width: 85%;" />
+                        <button type="button" id="btnSaverow" class="btn-brown">Save</button>
                     </div>
 
-                    <table class="table table-bordered">
+
+                    <table class="table table-bordered" id="subprojectTable">
                         <thead>
                             <tr>
                                 <th style="background-color: #5c3c0a; color: white;">Name</th>
@@ -205,28 +207,12 @@
                                 <th style="background-color: #5c3c0a; color: white;"></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>Project-1</td>
-                                <td><input type="checkbox" checked /></td>
-                                <td><button class="btn-brown btn-sm">Save</button></td>
-                            </tr>
-                            <tr>
-                                <td>Project-2</td>
-                                <td><input type="checkbox" checked /></td>
-                                <td><button class="btn-brown btn-sm">Save</button></td>
-                            </tr>
-                            <tr>
-                                <td>Project-3</td>
-                                <td><input type="checkbox" checked /></td>
-                                <td><button class="btn-brown btn-sm">Save</button></td>
-                            </tr>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn-brown">Save</button>
+                    <button type="button" class="btn-brown" id="finalSaveBtn">Save</button>
                 </div>
             </div>
         </div>
@@ -257,49 +243,48 @@
     </div>
 
     <!-- Bootstrap Scripts -->
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 
-    <!-- JS logic -->
     <script>
+        let subProjects = [];
+        let mainProjectId = null;
+
+        function appendSubProjectRow(name, isChecked) {
+            const row = `
+                <tr>
+                    <td>${name}</td>
+                    <td><input type="checkbox" class="chkStatus" ${isChecked ? 'checked' : ''} /></td>
+                    <td><button class="btn-brown btn-sm btn-save-status">Save</button></td>
+                </tr>
+            `;
+            $('#subprojectTable tbody').append(row);
+        }
 
         $(document).ready(function () {
             $('.view-btn').click(function () {
+                const name = $(this).data('name');
+                const filePath = $(this).data('file');
+                const fullUrl = window.location.origin + filePath;
 
-            const name = $(this).data('name');
-            const filePath = $(this).data('file');
-            const fullUrl = window.location.origin + filePath;
+                $('#modalTitle').text('View Json File');
+                $('#projectName').val(name).prop('readonly', true);
+                $('#jsonFileGroup').addClass('d-none');
+                $('#saveBtn').hide();
+                $('#jsonContentRow').removeClass('d-none');
+                $('#jsonViewer').val("Loading...");
 
-            $('#modalTitle').text('View Json File');
-            $('#projectName').val(name).prop('readonly', true);
-            $('#jsonFileGroup').addClass('d-none');
-            $('#saveBtn').hide();
-            $('#jsonContentRow').removeClass('d-none');
-            $('#jsonViewer').val("Loading...");
-
-            fetch(fullUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("File not found");
-                    }
-                    return response.text();
-                })
-                .then(text => {
-                    // Check if HTML is being returned instead of JSON
-                    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+                fetch(fullUrl)
+                    .then(response => response.ok ? response.text() : Promise.reject())
+                    .then(text => {
+                        $('#jsonViewer').val(text.includes('<!DOCTYPE html>') ? "No JSON file found." : text);
+                    })
+                    .catch(() => {
                         $('#jsonViewer').val("No JSON file found.");
-                    } else {
-                        $('#jsonViewer').val(text);
-                    }
-                })
-                .catch(error => {
-                    $('#jsonViewer').val("No JSON file found.");
-                });
-        });
+                    });
+            });
 
-
-            // Top-level "Add" modal reset
             $('#openAddModal').click(function () {
                 $('#modalTitle').text('ADD');
                 $('#projectName').val('').prop('readonly', false);
@@ -311,20 +296,72 @@
             });
 
             $('.row-add-btn').click(function () {
-                const project = $(this).data('project');
-                $('#assignInput').val(project);
+                mainProjectId = $(this).data('id');
+                subProjects = [];
+                $('#assignInput').val('');
+                $('#subprojectTable tbody').empty();
+
+                $.get('/Project/GetSubProjects', { mainProjectId: mainProjectId }, function (data) {
+                    if (Array.isArray(data)) {
+                        data.forEach(sp => {
+                            subProjects.push(sp);
+                            appendSubProjectRow(sp.name, sp.isAssigned);
+                        });
+                    }
+                });
             });
 
             $('.delete-btn').click(function () {
-                var name = $(this).data('name');
-                var id = $(this).data('id');
-                $('#deleteProjectName').text(name);
-                $('#deleteProjectId').val(id);
+                $('#deleteProjectName').text($(this).data('name'));
+                $('#deleteProjectId').val($(this).data('id'));
             });
 
-        });
+            $('#btnSaverow').click(function () {
+                const name = $('#assignInput').val().trim();
+                if (!name) return;
 
+                const subProject = { id: 0, name: name, isAssigned: true };
+                subProjects.push(subProject);
+                appendSubProjectRow(name, true);
+                $('#assignInput').val('');
+            });
+
+            $(document).on('click', '.btn-save-status', function () {
+                const row = $(this).closest('tr');
+                const name = row.find('td:first').text();
+                const isChecked = row.find('.chkStatus').is(':checked');
+                const sp = subProjects.find(x => x.name === name);
+                if (sp) sp.isAssigned = isChecked;
+                alert('Status updated for: ' + name);
+            });
+
+            $('#finalSaveBtn').click(function () {
+                const finalList = subProjects.filter(x => x.isAssigned);
+                if (finalList.length === 0) return alert("Please select at least one subproject");
+
+                $.ajax({
+                    url: '/Project/SaveSubProjectsWithNew',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ MainProjectId: mainProjectId, SubProjects: finalList }),
+                    success: function (res) {
+                        if (res.success) {
+                            alert("Saved successfully");
+                            $('#rowAddModal').modal('hide');
+                            location.reload();
+                        } else {
+                            alert("Save failed");
+                        }
+                    },
+                    error: function () {
+                        alert("Error during save");
+                    }
+                });
+            });
+        });
     </script>
+
+
 
 </body>
 </html>
